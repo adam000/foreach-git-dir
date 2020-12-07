@@ -1,0 +1,7 @@
+ 1 - check-git-dirs -vs ~/src  1.83s user 2.91s system 53% cpu 8.940 total
+ 2 - check-git-dirs -vs ~/src  1.72s user 2.84s system 74% cpu 6.107 total
+ 4 - check-git-dirs -vs ~/src  1.67s user 2.97s system 111% cpu 4.151 total
+ 6 - check-git-dirs -vs ~/src  1.75s user 3.37s system 139% cpu 3.665 total
+ 8 - check-git-dirs -vs ~/src  1.98s user 4.18s system 174% cpu 3.518 total
+16 - check-git-dirs -vs ~/src  1.97s user 4.68s system 197% cpu 3.375 total
+32 - check-git-dirs -vs ~/src  2.08s user 5.06s system 214% cpu 3.336 total

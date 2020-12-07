@@ -48,40 +48,61 @@ Options:
 	}
 	var options CommandLineOptions
 	arguments.Bind(&options)
-	//log.Printf("Found options: %v", options)
 
 	var waitGroup sync.WaitGroup
-	repos := make(chan repository, 8)
-	errors := make(chan error, 8)
+	repos := make(chan repository)
+	errors := make(chan error)
+	recall := make(chan struct{})
+
+	jobStack := JobStack{
+		inbox:  make(chan string),
+		outbox: make(chan string),
+	}
+	defer jobStack.Close()
+	go jobStack.Run(recall)
+
+	numThreads := 16
+	for i := 0; i < numThreads; i++ {
+		go func() {
+			for {
+				select {
+				case job := <-jobStack.outbox:
+					parseDirectory(options, job, jobStack.inbox, repos, errors, &waitGroup)
+				case <-recall:
+					break
+				}
+			}
+		}()
+	}
 
 	if rootDir, err := filepath.Abs(options.RootDir); err != nil {
 		log.Fatalf("Could not make root-dir absolute: %v", err)
 	} else {
 		waitGroup.Add(1)
-		go parseDirectory(options, rootDir, repos, errors, &waitGroup)
+		jobStack.inbox <- rootDir
 	}
 
 	printWait := sync.WaitGroup{}
+
 	printWait.Add(1)
 	go printRepositoryInfo(options, repos, &printWait)
 	printWait.Add(1)
 	go printErrorInfo(errors, &printWait)
 
-	//log.Println("Waiting on waitGroup...")
 	waitGroup.Wait()
-	//log.Println("Done waiting on waitGroup")
 	close(repos)
 	close(errors)
-	//log.Println("Waiting on printWait...")
+	for i := 0; i < numThreads+1; i++ {
+		recall <- struct{}{}
+	}
+
 	printWait.Wait()
 	time.Sleep(2 * time.Second)
-	//log.Println("Done waiting on printWait")
 }
 
-func parseDirectory(options CommandLineOptions, dir string, repos chan<- repository, errors chan<- error, waitGroup *sync.WaitGroup) {
+func parseDirectory(options CommandLineOptions, dir string, outJobs chan<- string, repos chan<- repository, errors chan<- error, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
-	//log.Println("Dir received")
 	if stat, err := os.Stat(dir); err != nil {
 		errors <- fmt.Errorf("Could not read root directory: %w", err)
 		return
@@ -97,7 +118,6 @@ func parseDirectory(options CommandLineOptions, dir string, repos chan<- reposit
 		return
 	} else if !isGitRoot {
 		// Recurse within
-		//log.Printf("Recursing under '%s'", dir)
 		files, dirErr := ioutil.ReadDir(dir)
 		if dirErr != nil {
 			errors <- fmt.Errorf("Reading directory '%s': %w", dir, dirErr)
@@ -106,9 +126,8 @@ func parseDirectory(options CommandLineOptions, dir string, repos chan<- reposit
 		for _, fileInfo := range files {
 			if fileInfo.IsDir() {
 				nextDir := filepath.Join(dir, fileInfo.Name())
-				//log.Printf("Recursing into '%s'", nextDir)
 				waitGroup.Add(1)
-				go parseDirectory(options, nextDir, repos, errors, waitGroup)
+				outJobs <- nextDir
 			}
 		}
 		return
@@ -128,9 +147,7 @@ func parseDirectory(options CommandLineOptions, dir string, repos chan<- reposit
 		return
 	}
 
-	//log.Printf("Sending repo %s", repo.root)
 	repos <- repo
-	//log.Println("Done sending repo")
 }
 
 func RunInDir(directory string, command ...string) (result string, isGitRoot bool, err error) {
