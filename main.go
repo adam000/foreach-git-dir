@@ -83,7 +83,6 @@ Options:
 	waitGroup.Wait()
 	close(repos)
 	close(errors)
-	log.Println("Recalling goRoutines")
 	for i := 0; i < numGoroutines; i++ {
 		recall <- struct{}{}
 	}

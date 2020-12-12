@@ -1,7 +1,13 @@
- 1 - check-git-dirs -vs ~/src  1.83s user 2.91s system 53% cpu 8.940 total
- 2 - check-git-dirs -vs ~/src  1.72s user 2.84s system 74% cpu 6.107 total
- 4 - check-git-dirs -vs ~/src  1.67s user 2.97s system 111% cpu 4.151 total
- 6 - check-git-dirs -vs ~/src  1.75s user 3.37s system 139% cpu 3.665 total
- 8 - check-git-dirs -vs ~/src  1.98s user 4.18s system 174% cpu 3.518 total
-16 - check-git-dirs -vs ~/src  1.97s user 4.68s system 197% cpu 3.375 total
-32 - check-git-dirs -vs ~/src  2.08s user 5.06s system 214% cpu 3.336 total
+This isn't supposed to be scientific or anything, I just ran these once to see how well the goroutines helped with scaling
+This was run on a 2018 MBP with a 6c/12t i7
+
+numGoroutines - output
+
+ 1 - check-git-dirs -vs ~/src  1.66s user 2.51s system 68% cpu 6.124 total
+ 2 - check-git-dirs -vs ~/src  1.58s user 2.46s system 119% cpu 3.390 total
+ 4 - check-git-dirs -vs ~/src  1.64s user 2.86s system 215% cpu 2.092 total
+ 8 - check-git-dirs -vs ~/src  1.83s user 3.65s system 387% cpu 1.413 total
+16 - check-git-dirs -vs ~/src  1.96s user 4.56s system 504% cpu 1.292 total
+32 - check-git-dirs -vs ~/src  2.06s user 4.86s system 528% cpu 1.307 total
+48 - check-git-dirs -vs ~/src  2.11s user 5.06s system 514% cpu 1.394 total
+64 - DNF, too many open files
