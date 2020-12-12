@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 )
 
@@ -10,14 +11,14 @@ type JobStack struct {
 	outbox chan string
 }
 
-func (j *JobStack) Run(recall <-chan struct{}) {
+func (j *JobStack) Run(ctx context.Context) {
 	for {
 		// Send messages as long as possible (while someone is waiting)
 	Send:
 		for len(j.stack) > 0 {
 			select {
-			case <-recall:
-				panic("Recall message sent while there are still messages in the stack")
+			case <-ctx.Done():
+				panic("Context cancelled while there are jobs on the stack")
 			case j.outbox <- j.stack[len(j.stack)-1]:
 				j.stack = j.stack[:len(j.stack)-1]
 			default:
@@ -28,7 +29,7 @@ func (j *JobStack) Run(recall <-chan struct{}) {
 	Receive:
 		for {
 			select {
-			case <-recall:
+			case <-ctx.Done():
 				return
 			case job := <-j.inbox:
 				j.stack = append(j.stack, job)
