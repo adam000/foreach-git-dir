@@ -10,6 +10,9 @@ import (
 	"sync"
 
 	docopt "github.com/docopt/docopt-go"
+
+	"github.com/adam000/goutils/git"
+	"github.com/adam000/goutils/shell"
 )
 
 type repository struct {
@@ -94,7 +97,7 @@ func processDirectories(jobStack *JobStack, options CommandLineOptions, errors c
 	for {
 		select {
 		case dir := <-jobStack.outbox:
-			if isRoot, subdirs, err := ParseDirectory(IsGitRoot, dir); err != nil {
+			if isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, dir); err != nil {
 				errors <- err
 			} else {
 				if isRoot {
