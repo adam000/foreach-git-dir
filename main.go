@@ -1,9 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -50,78 +50,51 @@ Options:
 	var options CommandLineOptions
 	arguments.Bind(&options)
 
-	var waitGroup sync.WaitGroup
-	repos := make(chan repository)
-	errors := make(chan error)
-	recall := make(chan struct{})
-
-	jobStack := JobStack{
-		inbox:  make(chan string),
-		outbox: make(chan string),
-	}
-	defer jobStack.Close()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go jobStack.Run(ctx)
-
-	numGoroutines := 16
-	for i := 0; i < numGoroutines; i++ {
-		go processDirectories(&jobStack, options, errors, repos, recall, &waitGroup)
-	}
-
-	if rootDir, err := filepath.Abs(options.RootDir); err != nil {
+	rootDir, err := filepath.Abs(options.RootDir)
+	if err != nil {
 		log.Fatalf("Could not make root-dir absolute: %v", err)
-	} else {
-		waitGroup.Add(1)
-		jobStack.inbox <- rootDir
 	}
-
-	printWait := sync.WaitGroup{}
-
-	printWait.Add(1)
-	go printRepositoryInfo(options, repos, &printWait)
-	printWait.Add(1)
-	go printErrorInfo(errors, &printWait)
-
-	waitGroup.Wait()
-	close(repos)
-	close(errors)
-	for i := 0; i < numGoroutines; i++ {
-		recall <- struct{}{}
-	}
-
-	printWait.Wait()
+	output := log.New(os.Stdout, "", 0)
+	sem := make(chan struct{}, 16)
+	processDirectory(output, options, sem, rootDir)
 }
 
-func processDirectories(jobStack *JobStack, options CommandLineOptions, errors chan<- error, repos chan<- repository, recall <-chan struct{}, waitGroup *sync.WaitGroup) {
-	for {
-		select {
-		case dir := <-jobStack.outbox:
-			if isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, dir); err != nil {
-				errors <- err
-			} else {
-				if isRoot {
-					repo, err := getRepositoryInfo(options, dir)
-					if err != nil {
-						errors <- fmt.Errorf("Could not get info for repository '%s': %w", dir, err)
-					} else {
-						repos <- repo
-					}
-				} else {
-					for _, subdir := range subdirs {
-						waitGroup.Add(1)
-						jobStack.inbox <- subdir
-					}
-				}
-			}
-			waitGroup.Done()
-		case <-recall:
-			break
+// processDirectory recursively searches a directory for Git repositories and
+// outputs their status. The given semaphore is used to limit concurrent work.
+func processDirectory(output *log.Logger, options CommandLineOptions, sem chan struct{}, dir string) {
+	sem <- struct{}{} // acquire semaphore
+	isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, dir)
+	if err != nil {
+		log.Printf("ERROR: %v", err)
+		<-sem // release semaphore
+		return
+	}
+	if isRoot {
+		repo, err := getRepositoryInfo(options, dir)
+		if err != nil {
+			log.Printf("ERROR: could not get info for repository %q: %v", dir, err)
 		}
+		printRepositoryInfo(output, options, repo)
+		<-sem // release semaphore
+		return
 	}
+
+	// Descend into subdirectories.
+	// Release the semaphore to permit work to continue.
+	<-sem
+	var wg sync.WaitGroup
+	wg.Add(len(subdirs))
+	for _, subdir := range subdirs {
+		subdir := subdir // capture loop variable for closure
+		go func() {
+			defer wg.Done()
+			processDirectory(output, options, sem, subdir)
+		}()
+	}
+	wg.Wait()
 }
 
-func getRepositoryInfo(options CommandLineOptions, pwd string) (repo repository, err error) {
+func getRepositoryInfo(options CommandLineOptions, pwd string) (*repository, error) {
 	isClean := true
 	stashes := ""
 	status := ""
@@ -132,7 +105,7 @@ func getRepositoryInfo(options CommandLineOptions, pwd string) (repo repository,
 		cmd.Dir = pwd
 		output, err := cmd.Output()
 		if err != nil {
-			return repository{}, err
+			return nil, err
 		}
 		stashes = strings.TrimSpace(string(output))
 		isClean = isClean && len(stashes) == 0
@@ -157,43 +130,38 @@ func getRepositoryInfo(options CommandLineOptions, pwd string) (repo repository,
 			cmd.Dir = pwd
 			output, err := cmd.Output()
 			if err != nil {
-				return repository{}, err
+				return nil, err
 			}
 			status = strings.TrimSpace(string(output))
 		}
 	}
 
-	return repository{pwd, isClean, stashes, status}, nil
+	return &repository{pwd, isClean, stashes, status}, nil
 }
 
-func printRepositoryInfo(options CommandLineOptions, repos <-chan repository, printWait *sync.WaitGroup) {
-	defer printWait.Done()
-	for repo := range repos {
-		if repo.isClean && !options.Verbose {
-			continue
-		}
-		fmt.Printf("Repository root: %s\n", repo.root)
-		if !options.Brief {
-			if len(repo.status) != 0 {
-				fmt.Println("\tStatus:")
-				for _, line := range strings.Split(repo.status, "\n") {
-					fmt.Printf("\t\t%s\n", line)
-				}
-			}
+func printRepositoryInfo(output *log.Logger, options CommandLineOptions, repo *repository) {
+	if repo.isClean && !options.Verbose {
+		return
+	}
+	// Collect message in buffer and send output as single log event.
+	buf := new(strings.Builder)
+	defer output.Print(buf)
 
-			if options.Stashes && len(repo.stashes) != 0 {
-				fmt.Println("\tStashes:")
-				for _, line := range strings.Split(repo.stashes, "\n") {
-					fmt.Printf("\t\t%s\n", line)
-				}
-			}
+	fmt.Fprintf(buf, "Repository root: %s\n", repo.root)
+	if options.Brief {
+		return
+	}
+	if len(repo.status) != 0 {
+		fmt.Fprintln(buf, "\tStatus:")
+		for _, line := range strings.Split(repo.status, "\n") {
+			fmt.Fprintf(buf, "\t\t%s\n", line)
 		}
 	}
-}
 
-func printErrorInfo(errors <-chan error, printWait *sync.WaitGroup) {
-	defer printWait.Done()
-	for err := range errors {
-		fmt.Printf("ERROR: %v\n", err)
+	if options.Stashes && len(repo.stashes) != 0 {
+		fmt.Fprintln(buf, "\tStashes:")
+		for _, line := range strings.Split(repo.stashes, "\n") {
+			fmt.Fprintf(buf, "\t\t%s\n", line)
+		}
 	}
 }
