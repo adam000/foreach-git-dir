@@ -35,7 +35,7 @@ Description: find all the git repositories under the current directory and repor
 outstanding changes (meaning the working directory is not clean). Can also show stashes with -s
 
 Usage:
-	check-git-dirs [(--verbose|-v)|(--brief|-b)] [(--stashes|-s)] <root-dir>
+	foreach-git-dir [(--verbose|-v)|(--brief|-b)] [(--stashes|-s)] <root-dir>
 
 Options:
 	--verbose -v  List all git repositories found, even if they don't contain changes

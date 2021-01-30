@@ -1,4 +1,4 @@
-module github.com/adam000/check-git-dirs
+module github.com/adam000/foreach-git-dir
 
 go 1.15
 
