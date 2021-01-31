@@ -114,11 +114,10 @@ func getRepositoryInfo(options CommandLineOptions, pwd string) (*repository, err
 	// Run `git diff --quiet` to see if the working directory is dirty
 	workingDirectoryIsClean := true
 	{
-		cmd := exec.Command("git", "diff", "--quiet")
+		cmd := exec.Command("git", "status", "--porcelain")
 		cmd.Dir = pwd
-		_, err := cmd.Output()
-		// Assume that this means there's a diff
-		workingDirectoryIsClean = err == nil
+		out, _ := cmd.Output()
+		workingDirectoryIsClean = len(out) == 0
 	}
 
 	if !workingDirectoryIsClean {
