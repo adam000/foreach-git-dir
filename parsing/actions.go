@@ -23,15 +23,15 @@ func ActionInfo() map[string]actionInfo {
 }
 func defaultActionInfo() map[string]actionInfo {
 	return map[string]actionInfo{
-		"-status": actionInfo{
+		"-status": {
 			Name:   "-status",
 			Action: "git status",
 		},
-		"-shortstatus": actionInfo{
+		"-shortstatus": {
 			Name:   "-shortStatus",
 			Action: "git status -sb",
 		},
-		"-stashes": actionInfo{
+		"-stashes": {
 			Name:   "-stashes",
 			Action: "git stash list",
 		},

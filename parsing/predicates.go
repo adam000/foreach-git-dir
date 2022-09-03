@@ -59,27 +59,27 @@ type predicateInfo struct {
 // This isn't used to its fullest here; this should also be used to print the usage string
 func PredicateInfo() map[string]predicateInfo {
 	return map[string]predicateInfo{
-		"-and": predicateInfo{
+		"-and": {
 			Name:        "-and",
 			Description: "Combine two or more predicates where both must be true",
 			Typ:         pAnd,
 		},
-		"-or": predicateInfo{
+		"-or": {
 			Name:        "-or",
 			Description: "Combine two or more predicates where either one must be true",
 			Typ:         pOr,
 		},
-		"-not": predicateInfo{
+		"-not": {
 			Name:        "-not",
 			Description: "Negate the following predicate",
 			Typ:         pNot,
 		},
-		"-isdirty": predicateInfo{
+		"-isdirty": {
 			Name:        "-isDirty",
 			Description: "Is the repository dirty?",
 			Typ:         pFlag,
 		},
-		"-custom": predicateInfo{
+		"-custom": {
 			Name:        "-custom",
 			Description: "Make a custom predicate",
 			Typ:         pFlag,

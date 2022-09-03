@@ -29,11 +29,11 @@ func TestNoPredicateTokenization(t *testing.T) {
 
 func TestSinglePredicatesTokenization(t *testing.T) {
 	inputs := [][]string{
-		[]string{"-IsDirty", "--", "-PrintBriefStatus"},
-		[]string{"-isdirty", "--", "-PrintBriefStatus"},
-		[]string{"-And", "--", "-PrintBriefStatus"},
-		[]string{"-Or", "--", "-PrintBriefStatus"},
-		[]string{"-Not", "--", "-PrintBriefStatus"},
+		{"-IsDirty", "--", "-PrintBriefStatus"},
+		{"-isdirty", "--", "-PrintBriefStatus"},
+		{"-And", "--", "-PrintBriefStatus"},
+		{"-Or", "--", "-PrintBriefStatus"},
+		{"-Not", "--", "-PrintBriefStatus"},
 	}
 	argIndex := 0
 
@@ -56,10 +56,10 @@ func TestSinglePredicatesTokenization(t *testing.T) {
 
 func TestValidParenTokenization(t *testing.T) {
 	inputs := [][]string{
-		[]string{"(-IsDirty)", "--", "-PrintBriefStatus"},
-		[]string{"(", "-IsDirty", ")", "--", "-PrintBriefStatus"},
-		[]string{"(-IsDirty", ")", "--", "-PrintBriefStatus"},
-		[]string{"(", "-IsDirty)", "--", "-PrintBriefStatus"},
+		{"(-IsDirty)", "--", "-PrintBriefStatus"},
+		{"(", "-IsDirty", ")", "--", "-PrintBriefStatus"},
+		{"(-IsDirty", ")", "--", "-PrintBriefStatus"},
+		{"(", "-IsDirty)", "--", "-PrintBriefStatus"},
 	}
 	argIndex := 0
 
@@ -88,8 +88,8 @@ func TestValidParenTokenization(t *testing.T) {
 
 func TestInvalidParenTokenization(t *testing.T) {
 	inputs := [][]string{
-		[]string{"(-Custom)", "--", "-PrintBriefStatus"},
-		[]string{"(-Custom", ")", "--", "-PrintBriefStatus"},
+		{"(-Custom)", "--", "-PrintBriefStatus"},
+		{"(-Custom", ")", "--", "-PrintBriefStatus"},
 	}
 	argIndex := 0
 
@@ -136,7 +136,7 @@ func TestNonZeroArgIndexTokenization(t *testing.T) {
 
 func TestCustomTokenization(t *testing.T) {
 	inputs := [][]string{
-		[]string{"-Custom", "\"asdf\"", "--", "-PrintBriefStatus"},
+		{"-Custom", "\"asdf\"", "--", "-PrintBriefStatus"},
 	}
 	argIndex := 0
 
@@ -159,8 +159,8 @@ func TestCustomTokenization(t *testing.T) {
 
 func TestInvalidTokenization(t *testing.T) {
 	inputs := [][]string{
-		[]string{"-asdf", "--", "-PrintBriefStatus"},
-		[]string{"-isDirty"},
+		{"-asdf", "--", "-PrintBriefStatus"},
+		{"-isDirty"},
 	}
 	argIndex := 0
 
@@ -208,13 +208,13 @@ func TestEmptyParsing(t *testing.T) {
 
 func TestSimpleParsing(t *testing.T) {
 	testCases := [][]predicateToken{
-		[]predicateToken{predicateToken{typ: pFlag, flag: "-isdirty"}},
-		[]predicateToken{
+		{predicateToken{typ: pFlag, flag: "-isdirty"}},
+		{
 			predicateToken{typ: pOpenParen},
 			predicateToken{typ: pFlag, flag: "-isdirty"},
 			predicateToken{typ: pCloseParen},
 		},
-		[]predicateToken{
+		{
 			predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
 		},
 	}
@@ -246,24 +246,24 @@ func TestSimpleParsing(t *testing.T) {
 
 func TestSimpleBinaryParsing(t *testing.T) {
 	testCases := [][]predicateToken{
-		[]predicateToken{
+		{
 			predicateToken{typ: pFlag, flag: "-isdirty"},
 			predicateToken{typ: pOr},
 			predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
 		},
-		[]predicateToken{
+		{
 			predicateToken{typ: pFlag, flag: "-isdirty"},
 			predicateToken{typ: pAnd},
 			predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
 		},
-		[]predicateToken{
+		{
 			predicateToken{typ: pFlag, flag: "-isdirty"},
 			predicateToken{typ: pOr},
 			predicateToken{typ: pFlag, flag: "-custom", text: "foo"},
 			predicateToken{typ: pOr},
 			predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
 		},
-		[]predicateToken{
+		{
 			predicateToken{typ: pFlag, flag: "-isdirty"},
 			predicateToken{typ: pAnd},
 			predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
@@ -299,7 +299,7 @@ func TestSimpleBinaryParsing(t *testing.T) {
 
 func TestSimplePredCanFail(t *testing.T) {
 	testCases := [][]predicateToken{
-		[]predicateToken{predicateToken{typ: pFlag, flag: "-isdirty"}},
+		{predicateToken{typ: pFlag, flag: "-isdirty"}},
 	}
 
 	for _, test := range testCases {
@@ -335,20 +335,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// And has higher precedence than or
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
-				predicateToken{typ: pCloseParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pCloseParen},
 			},
 			pred1Desc:     "asdf or zxcv and qwer",
 			pred2Desc:     "asdf or (zxcv and qwer)",
@@ -357,20 +357,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// or does not have the same / higher precedence than and
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr, flag: "-or"},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd, flag: "-and"},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr, flag: "-or"},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd, flag: "-and"},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen, text: "("},
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr, flag: "-or"},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pCloseParen, text: ")"},
-				predicateToken{typ: pAnd, flag: "-and"},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pOpenParen, text: "("},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr, flag: "-or"},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pCloseParen, text: ")"},
+				{typ: pAnd, flag: "-and"},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred1Desc:     "asdf or zxcv and qwer",
 			pred2Desc:     "(asdf or zxcv) and qwer",
@@ -379,20 +379,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// or is commutative (1)
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pCloseParen},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pCloseParen},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred1Desc:     "asdf or zxcv or qwer",
 			pred2Desc:     "(asdf or zxcv) or qwer",
@@ -401,20 +401,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// or is commutative (2)
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
-				predicateToken{typ: pCloseParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pCloseParen},
 			},
 			pred1Desc:     "asdf or zxcv or qwer",
 			pred2Desc:     "asdf or (zxcv or qwer)",
@@ -423,20 +423,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// and is commutative (1)
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pCloseParen},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pCloseParen},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred1Desc:     "asdf and zxcv and qwer",
 			pred2Desc:     "(asdf and zxcv) and qwer",
@@ -445,20 +445,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// and is commutative (2)
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
-				predicateToken{typ: pCloseParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pAnd},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pCloseParen},
 			},
 			pred1Desc:     "asdf and zxcv and qwer",
 			pred2Desc:     "asdf and (zxcv and qwer)",
@@ -467,20 +467,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// useless parens are useless (1)
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
-				predicateToken{typ: pCloseParen},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pCloseParen},
 			},
 			pred1Desc:     "asdf and zxcv and qwer",
 			pred2Desc:     "(asdf and zxcv and qwer)",
@@ -489,20 +489,20 @@ func TestPredicatePrecedence(t *testing.T) {
 		// useless parens are useless (2)
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "asdf"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
-				predicateToken{typ: pCloseParen},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "asdf"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pCloseParen},
 			},
 			pred1Desc:     "asdf or zxcv or qwer",
 			pred2Desc:     "(asdf or zxcv or qwer)",
@@ -511,18 +511,18 @@ func TestPredicatePrecedence(t *testing.T) {
 		// Not has higher precedence than and
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pNot},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pNot},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pNot},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pCloseParen},
-				predicateToken{typ: pAnd},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pOpenParen},
+				{typ: pNot},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pCloseParen},
+				{typ: pAnd},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred1Desc:     "not zxcv and qwer",
 			pred2Desc:     "(not zxcv) and qwer",
@@ -531,18 +531,18 @@ func TestPredicatePrecedence(t *testing.T) {
 		// Not has higher precedence than or
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pNot},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pNot},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pNot},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pCloseParen},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pOpenParen},
+				{typ: pNot},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pCloseParen},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred1Desc:     "not zxcv or qwer",
 			pred2Desc:     "(not zxcv) or qwer",
@@ -551,18 +551,18 @@ func TestPredicatePrecedence(t *testing.T) {
 		// Not has lower precedence than parens
 		{
 			pred1: []predicateToken{
-				predicateToken{typ: pNot},
-				predicateToken{typ: pOpenParen},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
-				predicateToken{typ: pCloseParen},
+				{typ: pNot},
+				{typ: pOpenParen},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pCloseParen},
 			},
 			pred2: []predicateToken{
-				predicateToken{typ: pNot},
-				predicateToken{typ: pFlag, flag: "-custom", text: "zxcv"},
-				predicateToken{typ: pOr},
-				predicateToken{typ: pFlag, flag: "-custom", text: "qwer"},
+				{typ: pNot},
+				{typ: pFlag, flag: "-custom", text: "zxcv"},
+				{typ: pOr},
+				{typ: pFlag, flag: "-custom", text: "qwer"},
 			},
 			pred1Desc:     "not (zxcv or qwer)",
 			pred2Desc:     "not zxcv or qwer",
