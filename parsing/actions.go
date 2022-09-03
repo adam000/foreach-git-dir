@@ -48,7 +48,7 @@ func tokenizeActions(args []string, argIndex int) ([]string, int, error) {
 		if entry, ok := actionOptions[thisArg]; ok {
 			actions = append(actions, entry.Action)
 		} else {
-			return actions, argIndex, fmt.Errorf("Unknown action flag '%s'", args[argIndex])
+			return actions, argIndex, fmt.Errorf("unknown action flag '%s'", args[argIndex])
 		}
 		argIndex++
 	}
@@ -60,10 +60,10 @@ func parseActions(args []string, argIndex int) ([]string, error) {
 	actions, argIndex, err := tokenizeActions(args, argIndex)
 
 	if err != nil {
-		return actions, fmt.Errorf("Error tokenizing actions: %w", err)
+		return actions, fmt.Errorf("error tokenizing actions: %w", err)
 	}
 	if len(args) != argIndex {
-		return actions, fmt.Errorf("Failed to parse all the actions (%d/%d)", argIndex, len(args))
+		return actions, fmt.Errorf("failed to parse all the actions (%d/%d)", argIndex, len(args))
 	}
 
 	return actions, nil

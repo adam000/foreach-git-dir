@@ -137,7 +137,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 				if info.Typ == pFlag && strings.ToLower(info.Name) == "-custom" {
 					// Can't have end parens after -custom but before the script
 					if numEndParens != 0 {
-						return []predicateToken{}, argIndex, fmt.Errorf("Can't have end parentheses immediately after -custom; argument required")
+						return []predicateToken{}, argIndex, fmt.Errorf("can't have end parentheses immediately after -custom; argument required")
 					}
 
 					// consume the next token
@@ -150,7 +150,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 						customCmd = customCmd[:len(customCmd)-1]
 					}
 					if len(customCmd) == 0 {
-						return []predicateToken{}, argIndex, fmt.Errorf("Can't have end parentheses immediately after -custom; argument required")
+						return []predicateToken{}, argIndex, fmt.Errorf("can't have end parentheses immediately after -custom; argument required")
 					}
 
 					pTok = append(pTok, predicateToken{
@@ -165,7 +165,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 					})
 				}
 			} else {
-				return []predicateToken{}, argIndex, fmt.Errorf("Could not find predicate '%s' (did you forget to include '--' to separate predicates and actions?)", thisArg)
+				return []predicateToken{}, argIndex, fmt.Errorf("could not find predicate '%s' (did you forget to include '--' to separate predicates and actions?)", thisArg)
 			}
 		}
 
@@ -177,7 +177,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 	}
 
 	if !predicateDividerFound {
-		return pTok, argIndex, fmt.Errorf("Could not find '--' to signify start of actions")
+		return pTok, argIndex, fmt.Errorf("could not find '--' to signify start of actions")
 	}
 
 	return pTok, argIndex, nil
@@ -212,7 +212,7 @@ func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
 		p.currentToken++
 		return p.provider.isDirty, nil
 	default:
-		return predicate.Id, fmt.Errorf("Unknown flag '%s'", token)
+		return predicate.Id, fmt.Errorf("unknown flag '%s'", token)
 	}
 }
 
@@ -244,7 +244,7 @@ func (p *predicateParser) parseBinaryExpression(left predicate.Predicate) (predi
 		right, err := p.parseExpression()
 		return p.provider.or(left, right), err
 	default:
-		return predicate.Id, fmt.Errorf("Unexpected token %s, expected -and or -or", p.tokens[p.currentToken].typ.ToString())
+		return predicate.Id, fmt.Errorf("unexpected token %s, expected -and or -or", p.tokens[p.currentToken].typ.ToString())
 	}
 }
 
@@ -266,7 +266,7 @@ func (p *predicateParser) parseExpression() (predicate.Predicate, error) {
 // just a flag.
 func (p *predicateParser) parseSubExpression() (predicate.Predicate, error) {
 	if p.allTokensConsumed() {
-		return predicate.Id, fmt.Errorf("Unexpected end of input")
+		return predicate.Id, fmt.Errorf("unexpected end of input")
 	}
 	switch p.tokens[p.currentToken].typ {
 	case pFlag:
@@ -288,18 +288,18 @@ func (p *predicateParser) parseSubExpression() (predicate.Predicate, error) {
 			return pred, err
 		}
 		if p.allTokensConsumed() {
-			return pred, fmt.Errorf("Missing close paren")
+			return pred, fmt.Errorf("missing close paren")
 		}
 		p.currentToken++
 		return pred, nil
 	}
-	return predicate.Id, fmt.Errorf("Unexpected %s, was expecting a flag, '-not', or '('", p.tokens[p.currentToken].typ.ToString())
+	return predicate.Id, fmt.Errorf("unexpected %s, was expecting a flag, '-not', or '('", p.tokens[p.currentToken].typ.ToString())
 }
 
 func parsePredicates(args []string, argIndex int) (predicate.Predicate, int, error) {
 	tokens, argIndex, err := tokenizePredicates(args, argIndex)
 	if err != nil {
-		return predicate.Id, argIndex, fmt.Errorf("Tokenizing predicates: %w", err)
+		return predicate.Id, argIndex, fmt.Errorf("tokenizing predicates: %w", err)
 	}
 
 	if len(tokens) != 0 {
@@ -310,10 +310,10 @@ func parsePredicates(args []string, argIndex int) (predicate.Predicate, int, err
 
 		pred, err := p.parseExpression()
 		if err != nil {
-			err = fmt.Errorf("Parsing predicates: %w", err)
+			err = fmt.Errorf("parsing predicates: %w", err)
 		}
 		if err == nil && !p.allTokensConsumed() {
-			err = fmt.Errorf("Did not consume all tokens (%d/%d)", p.currentToken, len(p.tokens))
+			err = fmt.Errorf("did not consume all tokens (%d/%d)", p.currentToken, len(p.tokens))
 		}
 		return pred, argIndex, err
 	}
