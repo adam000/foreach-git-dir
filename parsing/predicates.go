@@ -106,7 +106,6 @@ var predProvider = predicateProvider{
 func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, error) {
 	numArgs := len(args)
 	predicateDivider := "--"
-	predicateDividerFound := false
 
 	pTok := make([]predicateToken, 0)
 	tokenMap := PredicateInfo()
@@ -114,7 +113,6 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 		thisArg := strings.Trim(strings.ToLower(args[argIndex]), " \t")
 		if thisArg == predicateDivider {
 			argIndex++
-			predicateDividerFound = true
 			break
 		}
 
@@ -174,10 +172,6 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 			pTok = append(pTok, predicateToken{typ: pCloseParen})
 		}
 		argIndex++
-	}
-
-	if !predicateDividerFound {
-		return pTok, argIndex, fmt.Errorf("could not find '--' to signify start of actions")
 	}
 
 	return pTok, argIndex, nil

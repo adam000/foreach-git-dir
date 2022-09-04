@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/adam000/foreach-git-dir/parsing"
-	"github.com/adam000/foreach-git-dir/predicate"
 	"github.com/adam000/goutils/git"
 	"github.com/adam000/goutils/shell"
 )
@@ -22,7 +21,7 @@ Description: find all the git repositories under the <root-dir> and run some
 and -and combination of predicates.
 
 Usage:
-	foreach-git-dir <root-dir> [--verbose|-v] [<predicate>...] -- <action>...
+	foreach-git-dir <root-dir> [--verbose|-v] [<predicate>...] [-- <action>...]
 
 Predicates:
 %s
@@ -32,13 +31,16 @@ Actions:
 %s
 Every action is executed on every repository that matches the predicate(s).
 
+If no actions are given, prints every repository that matches <predicates>, or all
+repositories if no predicates are found.
+
 ------
 
 `
 
 	logger := log.New(os.Stdout, "", 0)
 
-	rootDir, verbose, predicates, actions, err := parsing.ParseCommandLine(os.Args[1:])
+	directives, err := parsing.ParseCommandLine(os.Args[1:])
 	if err != nil {
 		var predicates strings.Builder
 		for _, pred := range parsing.PredicateInfo() {
@@ -53,12 +55,12 @@ Every action is executed on every repository that matches the predicate(s).
 	}
 	sem := make(chan struct{}, 16)
 
-	processDirectory(logger, sem, verbose, rootDir, predicates, actions)
+	processDirectory(logger, sem, directives.RootDir, directives)
 }
 
 // processDirectory recursively searches a directory for Git repositories and
 // outputs their status. The given semaphore is used to limit concurrent work.
-func processDirectory(logger *log.Logger, sem chan struct{}, verbose bool, dir string, tester predicate.Predicate, actions []string) {
+func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directives parsing.Directives) {
 	sem <- struct{}{} // acquire semaphore
 	isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, dir)
 	if err != nil {
@@ -67,36 +69,47 @@ func processDirectory(logger *log.Logger, sem chan struct{}, verbose bool, dir s
 		return
 	}
 	if isRoot {
-		shouldRun, err := tester(dir)
-		if err != nil {
-			logger.Printf("ERROR: could not test repository %s: %v", dir, err)
-			return
+		shouldRun := true
+		if directives.Predicates != nil {
+			var err error
+			shouldRun, err = directives.Predicates(dir)
+			if err != nil {
+				logger.Printf("ERROR: could not test repository %s: %v", dir, err)
+				return
+			}
 		}
 
 		var output strings.Builder
 
-		if shouldRun || (!shouldRun && verbose) {
-			fmt.Fprintf(&output, "\nRepository root: %s\n", dir)
-		}
+		if len(directives.Actions) == 0 {
+			if shouldRun {
+				fmt.Fprintln(&output, dir)
+			}
+		} else {
+			if shouldRun || (!shouldRun && directives.Verbose) {
+				fmt.Fprintf(&output, "\nRepository root: %s\n", dir)
+			}
 
-		if shouldRun {
-			for _, action := range actions {
-				actionWords := strings.Fields(action)
-				// TODO test if this works with quotation marks or escaped spaces in the action
-				cmd := exec.Command(actionWords[0], actionWords[1:]...)
-				cmd.Dir = dir
+			if shouldRun {
+				for _, action := range directives.Actions {
+					actionWords := strings.Fields(action)
+					// TODO test if this works with quotation marks or escaped spaces in the action
+					cmd := exec.Command(actionWords[0], actionWords[1:]...)
+					cmd.Dir = dir
 
-				stdout, err := cmd.Output()
-				if err != nil {
-					fmt.Fprintf(&output, "Error while running %s: %s\n", action, err)
+					stdout, err := cmd.Output()
+					if err != nil {
+						fmt.Fprintf(&output, "Error while running %s: %s\n", action, err)
+					}
+					fmt.Fprintf(&output, "%s\n", strings.TrimSpace(string(stdout)))
 				}
-				fmt.Fprintf(&output, "%s\n", strings.TrimSpace(string(stdout)))
 			}
 		}
 
 		if output.Len() != 0 {
 			logger.Print(&output)
 		}
+
 		<-sem // release semaphore
 		return
 	}
@@ -110,7 +123,7 @@ func processDirectory(logger *log.Logger, sem chan struct{}, verbose bool, dir s
 		subdir := subdir // capture loop variable for closure
 		go func() {
 			defer wg.Done()
-			processDirectory(logger, sem, verbose, subdir, tester, actions)
+			processDirectory(logger, sem, subdir, directives)
 		}()
 	}
 	wg.Wait()
