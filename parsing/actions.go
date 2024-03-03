@@ -35,6 +35,14 @@ func defaultActionInfo() map[string]actionInfo {
 			Name:   "-stashes",
 			Action: "git stash list",
 		},
+		"-fetch": {
+			Name:   "-fetch",
+			Action: "git fetch",
+		},
+		"-fetchall": {
+			Name:   "-fetchAll",
+			Action: "git fetch --all",
+		},
 	}
 }
 
