@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -62,7 +63,8 @@ repositories if no predicates are found.
 // outputs their status. The given semaphore is used to limit concurrent work.
 func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directives parsing.Directives) {
 	sem <- struct{}{} // acquire semaphore
-	isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, dir)
+	normalizedDir := filepath.ToSlash(dir)
+	isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, normalizedDir)
 	if err != nil {
 		logger.Printf("ERROR: %v", err)
 		<-sem // release semaphore
