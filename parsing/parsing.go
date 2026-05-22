@@ -15,19 +15,31 @@ type Directives struct {
 	Predicates predicate.Predicate
 	Actions    []string
 	Excludes   []string
-	//ListOnly   bool
 }
 
-func ParseCommandLine(args []string) (Directives, error) {
-	directives := Directives{}
+// ParseCommandLine parses the command line taking optional defaults for root and excludes.
+// default parameters will only be used if the command line doesn't provide a value for them.
+func ParseCommandLine(args []string, defaultRoot string, defaultExcludes []string) (Directives, error) {
+	directives := Directives{
+		RootDir:  defaultRoot,
+		Excludes: defaultExcludes,
+	}
+
 	if len(args) == 0 {
-		return Directives{}, fmt.Errorf("no arguments provided")
+		if defaultRoot == "" {
+			return Directives{}, fmt.Errorf("no arguments provided and no default root dir provided")
+		}
+		return directives, nil
 	}
 
 	argIndex := 0
 
-	// First argument is <root-dir>
-	{
+	// First argument is <root-dir> if it doesn't start with a `-`
+	if strings.HasPrefix(args[argIndex], "-") {
+		if defaultRoot == "" {
+			return Directives{}, fmt.Errorf("expected first argument to be root dir, but got '%s' and no default root dir provided", args[argIndex])
+		}
+	} else {
 		rootDir, err := filepath.Abs(args[argIndex])
 		if err != nil {
 			return Directives{}, fmt.Errorf("error finding root dir: %w", err)
@@ -45,7 +57,7 @@ func ParseCommandLine(args []string) (Directives, error) {
 	}
 
 	if argIndex == len(args) {
-		//directives.ListOnly = true
+		// root dir was the only arg provided, so we're done
 		return directives, nil
 	}
 
@@ -66,7 +78,9 @@ func ParseCommandLine(args []string) (Directives, error) {
 		}
 		argIndex = newArgIndex
 		directives.Predicates = predicates
-		directives.Excludes = excludes
+		if len(excludes) != 0 {
+			directives.Excludes = excludes
+		}
 	}
 
 	// Look for all actions (args after --)
