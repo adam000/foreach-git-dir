@@ -84,6 +84,11 @@ func PredicateInfo() map[string]predicateInfo {
 			Description: "Make a custom predicate",
 			Typ:         pFlag,
 		},
+		"-exclude": {
+			Name:        "-exclude",
+			Description: "Exclude a directory (relative to rootDir)",
+			Typ:         pFlag,
+		},
 	}
 }
 
@@ -103,15 +108,18 @@ var predProvider = predicateProvider{
 	isDirty: predicate.IsDirty,
 }
 
-func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, error) {
+func tokenizePredicates(args []string, argIndex int) ([]predicateToken, []string, int, error) {
 	numArgs := len(args)
 	predicateDivider := "--"
 
 	pTok := make([]predicateToken, 0)
+	excludes := make([]string, 0)
 	tokenMap := PredicateInfo()
+	sawDivider := false
 	for numArgs != argIndex {
 		thisArg := strings.Trim(strings.ToLower(args[argIndex]), " \t")
 		if thisArg == predicateDivider {
+			sawDivider = true
 			argIndex++
 			break
 		}
@@ -135,7 +143,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 				if info.Typ == pFlag && strings.ToLower(info.Name) == "-custom" {
 					// Can't have end parens after -custom but before the script
 					if numEndParens != 0 {
-						return []predicateToken{}, argIndex, fmt.Errorf("can't have end parentheses immediately after -custom; argument required")
+						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -custom; argument required")
 					}
 
 					// consume the next token
@@ -148,7 +156,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 						customCmd = customCmd[:len(customCmd)-1]
 					}
 					if len(customCmd) == 0 {
-						return []predicateToken{}, argIndex, fmt.Errorf("can't have end parentheses immediately after -custom; argument required")
+						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -custom; argument required")
 					}
 
 					pTok = append(pTok, predicateToken{
@@ -156,6 +164,21 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 						flag: strings.ToLower(info.Name),
 						text: customCmd,
 					})
+				} else if info.Typ == pFlag && strings.ToLower(info.Name) == "-exclude" {
+					if numEndParens != 0 {
+						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -exclude; argument required")
+					}
+					argIndex++
+					excludeArg := args[argIndex]
+					// Take off end parens
+					for len(excludeArg) != 0 && excludeArg[len(excludeArg)-1] == ')' {
+						numEndParens++
+						excludeArg = excludeArg[:len(excludeArg)-1]
+					}
+					if len(excludeArg) == 0 {
+						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -exclude; argument required")
+					}
+					excludes = append(excludes, excludeArg)
 				} else {
 					pTok = append(pTok, predicateToken{
 						typ:  info.Typ,
@@ -163,7 +186,7 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 					})
 				}
 			} else {
-				return []predicateToken{}, argIndex, fmt.Errorf("could not find predicate '%s' (did you forget to include '--' to separate predicates and actions?)", thisArg)
+				return []predicateToken{}, excludes, argIndex, fmt.Errorf("could not find predicate '%s' (did you forget to include '--' to separate predicates and actions?)", thisArg)
 			}
 		}
 
@@ -174,7 +197,11 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, int, err
 		argIndex++
 	}
 
-	return pTok, argIndex, nil
+	if !sawDivider {
+		return []predicateToken{}, excludes, argIndex, fmt.Errorf("missing '--' to separate predicates and actions")
+	}
+
+	return pTok, excludes, argIndex, nil
 }
 
 type predicateParser struct {
@@ -290,10 +317,10 @@ func (p *predicateParser) parseSubExpression() (predicate.Predicate, error) {
 	return predicate.Id, fmt.Errorf("unexpected %s, was expecting a flag, '-not', or '('", p.tokens[p.currentToken].typ.ToString())
 }
 
-func parsePredicates(args []string, argIndex int) (predicate.Predicate, int, error) {
-	tokens, argIndex, err := tokenizePredicates(args, argIndex)
+func parsePredicates(args []string, argIndex int) (predicate.Predicate, []string, int, error) {
+	tokens, excludes, argIndex, err := tokenizePredicates(args, argIndex)
 	if err != nil {
-		return predicate.Id, argIndex, fmt.Errorf("tokenizing predicates: %w", err)
+		return predicate.Id, excludes, argIndex, fmt.Errorf("tokenizing predicates: %w", err)
 	}
 
 	if len(tokens) != 0 {
@@ -309,8 +336,8 @@ func parsePredicates(args []string, argIndex int) (predicate.Predicate, int, err
 		if err == nil && !p.allTokensConsumed() {
 			err = fmt.Errorf("did not consume all tokens (%d/%d)", p.currentToken, len(p.tokens))
 		}
-		return pred, argIndex, err
+		return pred, excludes, argIndex, err
 	}
 
-	return predicate.Id, argIndex, nil
+	return predicate.Id, excludes, argIndex, nil
 }

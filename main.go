@@ -120,13 +120,20 @@ func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directi
 	// Release the semaphore to permit work to continue.
 	<-sem
 	var wg sync.WaitGroup
-	wg.Add(len(subdirs))
+SubdirsLoop:
 	for _, subdir := range subdirs {
-		subdir := subdir // capture loop variable for closure
-		go func() {
+		for _, ex := range directives.Excludes {
+			relPath, _ := filepath.Rel(directives.RootDir, subdir)
+			if relPath == ex {
+				continue SubdirsLoop
+			}
+		}
+
+		wg.Add(1)
+		go func(subdir string) {
 			defer wg.Done()
 			processDirectory(logger, sem, subdir, directives)
-		}()
+		}(subdir)
 	}
 	wg.Wait()
 }

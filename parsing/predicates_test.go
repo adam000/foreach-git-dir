@@ -12,7 +12,7 @@ func TestNoPredicateTokenization(t *testing.T) {
 	input := []string{"--", "-PrintBriefStatus"}
 	argIndex := 0
 
-	tokens, argIndex, err := tokenizePredicates(input, argIndex)
+	tokens, _, argIndex, err := tokenizePredicates(input, argIndex)
 
 	if err != nil {
 		t.Errorf("Got error testing without predicates: %v", err)
@@ -38,7 +38,7 @@ func TestSinglePredicatesTokenization(t *testing.T) {
 	argIndex := 0
 
 	for _, input := range inputs {
-		tokens, argIndex, err := tokenizePredicates(input, argIndex)
+		tokens, _, argIndex, err := tokenizePredicates(input, argIndex)
 
 		if err != nil {
 			t.Errorf("Got error testing one predicate: %v", err)
@@ -64,7 +64,7 @@ func TestValidParenTokenization(t *testing.T) {
 	argIndex := 0
 
 	for _, input := range inputs {
-		tokens, _, err := tokenizePredicates(input, argIndex)
+		tokens, _, _, err := tokenizePredicates(input, argIndex)
 
 		if err != nil {
 			t.Errorf("Got error testing parens: %v", err)
@@ -94,7 +94,7 @@ func TestInvalidParenTokenization(t *testing.T) {
 	argIndex := 0
 
 	for _, input := range inputs {
-		_, _, err := tokenizePredicates(input, argIndex)
+		_, _, _, err := tokenizePredicates(input, argIndex)
 
 		if err == nil {
 			t.Errorf("Didn't get error testing invalid parens")
@@ -122,7 +122,7 @@ func TestNonZeroArgIndexTokenization(t *testing.T) {
 		input := testCase.input
 		argIndex := testCase.argIndex
 
-		tokens, _, err := tokenizePredicates(input, argIndex)
+		tokens, _, _, err := tokenizePredicates(input, argIndex)
 
 		if err != nil {
 			t.Errorf("Got error testing argIndex: %v", err)
@@ -141,7 +141,7 @@ func TestCustomTokenization(t *testing.T) {
 	argIndex := 0
 
 	for _, input := range inputs {
-		tokens, _, err := tokenizePredicates(input, argIndex)
+		tokens, _, _, err := tokenizePredicates(input, argIndex)
 
 		if err != nil {
 			t.Errorf("Got error testing custom predicate: %v", err)
@@ -165,10 +165,10 @@ func TestInvalidTokenization(t *testing.T) {
 	argIndex := 0
 
 	for _, input := range inputs {
-		_, _, err := tokenizePredicates(input, argIndex)
+		_, _, _, err := tokenizePredicates(input, argIndex)
 
 		if err == nil {
-			t.Errorf("Expected error testing invalid flag: %s", input[0])
+			t.Errorf("Expected error testing invalid flag(s): %s", input[0])
 		}
 	}
 }
@@ -652,7 +652,7 @@ func TestParseFailures(t *testing.T) {
 
 	for _, test := range testCases {
 		args := strings.Fields(test)
-		_, _, err := parsePredicates(args, 0)
+		_, _, _, err := parsePredicates(args, 0)
 		if err == nil {
 			t.Errorf("Expected error parsing predicate, didn't get one")
 		}
@@ -668,7 +668,7 @@ func TestParseOther(t *testing.T) {
 
 	for _, test := range testCases {
 		args := strings.Fields(test)
-		_, _, err := parsePredicates(args, 0)
+		_, _, _, err := parsePredicates(args, 0)
 		if err != nil {
 			t.Errorf("Error parsing: %s", err)
 		}

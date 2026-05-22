@@ -14,6 +14,7 @@ type Directives struct {
 	Verbose    bool
 	Predicates predicate.Predicate
 	Actions    []string
+	Excludes   []string
 	//ListOnly   bool
 }
 
@@ -59,12 +60,13 @@ func ParseCommandLine(args []string) (Directives, error) {
 
 	// Look for all predicates (args before --)
 	{
-		predicates, newArgIndex, err := parsePredicates(args, argIndex)
+		predicates, excludes, newArgIndex, err := parsePredicates(args, argIndex)
 		if err != nil {
 			return Directives{}, fmt.Errorf("error parsing predicates: %w", err)
 		}
 		argIndex = newArgIndex
 		directives.Predicates = predicates
+		directives.Excludes = excludes
 	}
 
 	// Look for all actions (args after --)
