@@ -160,7 +160,7 @@ func TestCustomTokenization(t *testing.T) {
 func TestInvalidTokenization(t *testing.T) {
 	inputs := [][]string{
 		{"-asdf", "--", "-PrintBriefStatus"},
-		{"-isDirty"},
+		{"-isDirty -sdf"},
 	}
 	argIndex := 0
 

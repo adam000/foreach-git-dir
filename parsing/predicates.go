@@ -115,11 +115,9 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, []string
 	pTok := make([]predicateToken, 0)
 	excludes := make([]string, 0)
 	tokenMap := PredicateInfo()
-	sawDivider := false
 	for numArgs != argIndex {
 		thisArg := strings.Trim(strings.ToLower(args[argIndex]), " \t")
 		if thisArg == predicateDivider {
-			sawDivider = true
 			argIndex++
 			break
 		}
@@ -195,10 +193,6 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, []string
 			pTok = append(pTok, predicateToken{typ: pCloseParen})
 		}
 		argIndex++
-	}
-
-	if !sawDivider {
-		return []predicateToken{}, excludes, argIndex, fmt.Errorf("missing '--' to separate predicates and actions")
 	}
 
 	return pTok, excludes, argIndex, nil
