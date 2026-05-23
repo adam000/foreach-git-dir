@@ -16,6 +16,13 @@ func tokenizeActions(args []string, argIndex int) ([]action.Action, int, error) 
 		thisArg := strings.Trim(strings.ToLower(args[argIndex]), " \t")
 		if entry, ok := actionOptions[thisArg]; ok {
 			actions = append(actions, entry)
+		} else if thisArg == "-custom" {
+			argIndex++
+			if numArgs == argIndex {
+				return actions, argIndex, fmt.Errorf("expected command after -custom but no more arguments found")
+			}
+			customCmd := args[argIndex]
+			actions = append(actions, action.NewCustomAction(customCmd))
 		} else {
 			return actions, argIndex, fmt.Errorf("unknown action flag '%s'", args[argIndex])
 		}
