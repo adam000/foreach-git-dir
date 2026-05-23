@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-type actionType int
-
 type actionInfo struct {
 	Name   string
 	Action string
