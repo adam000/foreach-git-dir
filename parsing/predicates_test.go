@@ -190,6 +190,9 @@ var testPredicateProvider = predicateProvider{
 			return succeeds, nil
 		}
 	},
+	hasIssues: func(root string) (bool, error) {
+		return strings.Contains(root, "issues"), nil
+	},
 }
 
 func TestEmptyParsing(t *testing.T) {
@@ -671,6 +674,38 @@ func TestParseOther(t *testing.T) {
 		_, _, _, err := parsePredicates(args, 0)
 		if err != nil {
 			t.Errorf("Error parsing: %s", err)
+		}
+	}
+}
+
+func TestHasIssuesTokenization(t *testing.T) {
+	inputs := [][]string{
+		{"-HasIssues", "--", "-PrintBriefStatus"},
+		{"-hasissues", "--", "-PrintBriefStatus"},
+		{"(-HasIssues)", "--", "-PrintBriefStatus"},
+	}
+
+	for _, input := range inputs {
+		tokens, _, _, err := tokenizePredicates(input, 0)
+
+		if err != nil {
+			t.Errorf("Got error testing -hasIssues tokenization: %v", err)
+		}
+
+		if len(tokens) < 1 {
+			t.Errorf("Got %d tokens when there should have been at least 1: %#v", len(tokens), tokens)
+		}
+
+		found := false
+		for _, token := range tokens {
+			if token.flag == "-hasissues" {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			t.Errorf("Could not find -hasIssues token in: %#v", tokens)
 		}
 	}
 }

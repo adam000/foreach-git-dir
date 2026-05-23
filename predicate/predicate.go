@@ -1,8 +1,6 @@
 package predicate
 
-import (
-	"os/exec"
-)
+import "os/exec"
 
 type Predicate func(string) (bool, error)
 

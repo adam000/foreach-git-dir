@@ -89,23 +89,30 @@ func PredicateInfo() map[string]predicateInfo {
 			Description: "Exclude a directory (relative to rootDir)",
 			Typ:         pFlag,
 		},
+		"-hasissues": {
+			Name:        "-hasIssues",
+			Description: "Does the repository have open issues? Requires gh (GitHub CLI) to be installed",
+			Typ:         pFlag,
+		},
 	}
 }
 
 type predicateProvider struct {
-	and     func(p1, p2 predicate.Predicate) predicate.Predicate
-	or      func(p1, p2 predicate.Predicate) predicate.Predicate
-	not     func(pred predicate.Predicate) predicate.Predicate
-	custom  func(string) predicate.Predicate
-	isDirty predicate.Predicate
+	and      func(p1, p2 predicate.Predicate) predicate.Predicate
+	or       func(p1, p2 predicate.Predicate) predicate.Predicate
+	not      func(pred predicate.Predicate) predicate.Predicate
+	custom   func(string) predicate.Predicate
+	isDirty  predicate.Predicate
+	hasIssues predicate.Predicate
 }
 
 var predProvider = predicateProvider{
-	and:     predicate.And,
-	or:      predicate.Or,
-	not:     predicate.Not,
-	custom:  predicate.Custom,
-	isDirty: predicate.IsDirty,
+	and:       predicate.And,
+	or:        predicate.Or,
+	not:       predicate.Not,
+	custom:    predicate.Custom,
+	isDirty:   predicate.IsDirty,
+	hasIssues: predicate.HasIssues,
 }
 
 func tokenizePredicates(args []string, argIndex int) ([]predicateToken, []string, int, error) {
@@ -213,8 +220,9 @@ func (p predicateParser) stoppingPoint() bool {
 }
 
 const (
-	customFlag  = "-custom"
-	isDirtyFlag = "-isdirty"
+	customFlag    = "-custom"
+	isDirtyFlag   = "-isdirty"
+	hasIssuesFlag = "-hasissues"
 )
 
 func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
@@ -226,6 +234,9 @@ func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
 	case isDirtyFlag:
 		p.currentToken++
 		return p.provider.isDirty, nil
+	case hasIssuesFlag:
+		p.currentToken++
+		return p.provider.hasIssues, nil
 	default:
 		return predicate.Id, fmt.Errorf("unknown flag '%s'", token)
 	}
