@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +14,27 @@ import (
 	"github.com/adam000/goutils/git"
 	"github.com/adam000/goutils/shell"
 )
+
+func newLogger() *slog.Logger {
+	stateHome := os.Getenv("XDG_STATE_HOME")
+	if stateHome == "" {
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			stateHome = filepath.Join(homeDir, ".local", "state")
+		}
+	}
+
+	if stateHome != "" {
+		stateDir := filepath.Join(stateHome, "foreach-git-dir")
+		if err := os.MkdirAll(stateDir, 0o755); err == nil {
+			logPath := filepath.Join(stateDir, "foreach-git-dir.log")
+			if logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); err == nil {
+				return slog.New(slog.NewTextHandler(logFile, nil))
+			}
+		}
+	}
+
+	return slog.New(slog.NewTextHandler(os.Stdout, nil))
+}
 
 func main() {
 	usage := `
@@ -40,7 +61,8 @@ repositories if no predicates are found.
 
 `
 
-	logger := log.New(os.Stdout, "", 0)
+	logger := newLogger()
+	slog.SetDefault(logger)
 
 	// Load config defaults from XDG_CONFIG_HOME if it exists
 	cfgRoot := ""
@@ -79,22 +101,59 @@ repositories if no predicates are found.
 		for _, action := range action.DefaultShellActions() {
 			actions.WriteString(fmt.Sprintf("%20s  %-58s\n", action.Name(), action.Summary()))
 		}
-		logger.Printf(usage, predicates.String(), actions.String())
-		logger.Fatalf("Failure parsing command line: %v", err)
+		fmt.Printf(usage, predicates.String(), actions.String())
+		fmt.Printf("Failure parsing command line: %v\n", err)
+		os.Exit(1)
 	}
 	sem := make(chan struct{}, 16)
 
-	processDirectory(logger, sem, directives.RootDir, directives)
+	results := make(chan result)
+	go func() {
+		processDirectory(sem, directives.RootDir, directives, results)
+		close(results)
+	}()
+
+	errorResults := make([]result, 0)
+	validResults := make([]result, 0)
+	for r := range results {
+		if r.err != nil {
+			errorResults = append(errorResults, r)
+		} else if r.output != "" {
+			validResults = append(validResults, r)
+		}
+	}
+
+	for _, r := range errorResults {
+		fmt.Printf("Error processing repository %s: %v\n", r.dir, r.err)
+	}
+
+	for _, r := range validResults {
+		fmt.Print(r.output)
+	}
+
+	fmt.Println()
+	fmt.Printf("%d repositories with %d errors\n", len(validResults), len(errorResults))
+}
+
+type result struct {
+	dir    string
+	output string
+	err    error
 }
 
 // processDirectory recursively searches a directory for Git repositories and
 // outputs their status. The given semaphore is used to limit concurrent work.
-func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directives parsing.Directives) {
+func processDirectory(sem chan struct{}, dir string, directives parsing.Directives, results chan result) {
 	sem <- struct{}{} // acquire semaphore
+
 	normalizedDir := filepath.ToSlash(dir)
 	isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, normalizedDir)
 	if err != nil {
-		logger.Printf("ERROR: %v", err)
+		results <- result{
+			dir:    normalizedDir,
+			output: "",
+			err:    fmt.Errorf("processing directory %s: %w", normalizedDir, err),
+		}
 		<-sem // release semaphore
 		return
 	}
@@ -104,7 +163,12 @@ func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directi
 			var err error
 			shouldRun, err = directives.Predicates(dir)
 			if err != nil {
-				logger.Printf("ERROR: could not test repository %s: %v", dir, err)
+				results <- result{
+					dir:    dir,
+					output: "",
+					err:    fmt.Errorf("testing predicates on repository %s: %w", dir, err),
+				}
+				<-sem // release semaphore
 				return
 			}
 		}
@@ -132,10 +196,11 @@ func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directi
 			}
 		}
 
-		if output.Len() != 0 {
-			logger.Print(&output)
+		results <- result{
+			dir:    dir,
+			output: output.String(),
+			err:    nil,
 		}
-
 		<-sem // release semaphore
 		return
 	}
@@ -156,7 +221,7 @@ SubdirsLoop:
 		wg.Add(1)
 		go func(subdir string) {
 			defer wg.Done()
-			processDirectory(logger, sem, subdir, directives)
+			processDirectory(sem, subdir, directives, results)
 		}(subdir)
 	}
 	wg.Wait()

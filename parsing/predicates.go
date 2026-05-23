@@ -98,11 +98,11 @@ func PredicateInfo() map[string]predicateInfo {
 }
 
 type predicateProvider struct {
-	and      func(p1, p2 predicate.Predicate) predicate.Predicate
-	or       func(p1, p2 predicate.Predicate) predicate.Predicate
-	not      func(pred predicate.Predicate) predicate.Predicate
-	custom   func(string) predicate.Predicate
-	isDirty  predicate.Predicate
+	and       func(p1, p2 predicate.Predicate) predicate.Predicate
+	or        func(p1, p2 predicate.Predicate) predicate.Predicate
+	not       func(pred predicate.Predicate) predicate.Predicate
+	custom    func(string) predicate.Predicate
+	isDirty   predicate.Predicate
 	hasIssues predicate.Predicate
 }
 

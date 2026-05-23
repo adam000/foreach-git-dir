@@ -33,8 +33,11 @@ func Or(p1, p2 Predicate) Predicate {
 
 func Custom(command string) Predicate {
 	return func(root string) (bool, error) {
-		// TODO implement custom predicates
-		return true, nil
+		cmd := exec.Command("sh", "-c", command)
+		cmd.Dir = root
+		_, err := cmd.Output()
+
+		return err == nil, nil
 	}
 }
 
