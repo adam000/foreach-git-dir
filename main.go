@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/adam000/foreach-git-dir/action"
 	"github.com/adam000/foreach-git-dir/parsing"
 	"github.com/adam000/goutils/git"
 	"github.com/adam000/goutils/shell"
@@ -76,8 +76,8 @@ repositories if no predicates are found.
 			predicates.WriteString(fmt.Sprintf("%20s  %-58s\n", pred.Name, pred.Description))
 		}
 		var actions strings.Builder
-		for _, action := range parsing.ActionInfo() {
-			actions.WriteString(fmt.Sprintf("%20s  %-58s\n", action.Name, action.Action))
+		for _, action := range action.DefaultShellActions() {
+			actions.WriteString(fmt.Sprintf("%20s  %-58s\n", action.Name(), action.Summary()))
 		}
 		logger.Printf(usage, predicates.String(), actions.String())
 		logger.Fatalf("Failure parsing command line: %v", err)
@@ -122,16 +122,12 @@ func processDirectory(logger *log.Logger, sem chan struct{}, dir string, directi
 
 			if shouldRun {
 				for _, action := range directives.Actions {
-					actionWords := strings.Fields(action)
-					// TODO test if this works with quotation marks or escaped spaces in the action
-					cmd := exec.Command(actionWords[0], actionWords[1:]...)
-					cmd.Dir = dir
+					stdout, err := action.Run(dir)
 
-					stdout, err := cmd.Output()
 					if err != nil {
 						fmt.Fprintf(&output, "Error while running %s: %s\n", action, err)
 					}
-					fmt.Fprintf(&output, "%s\n", strings.TrimSpace(string(stdout)))
+					fmt.Fprintf(&output, "%s\n", stdout)
 				}
 			}
 		}

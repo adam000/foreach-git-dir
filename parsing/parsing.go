@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/adam000/foreach-git-dir/action"
 	"github.com/adam000/foreach-git-dir/predicate"
 )
 
@@ -13,7 +14,7 @@ type Directives struct {
 	RootDir    string
 	Verbose    bool
 	Predicates predicate.Predicate
-	Actions    []string
+	Actions    []action.Action
 	Excludes   []string
 }
 

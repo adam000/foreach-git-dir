@@ -3,55 +3,19 @@ package parsing
 import (
 	"fmt"
 	"strings"
+
+	"github.com/adam000/foreach-git-dir/action"
 )
 
-type actionInfo struct {
-	Name   string
-	Action string
-}
-
-func ActionInfo() map[string]actionInfo {
-	// TODO implement storage of custom actions / exclusion of defaults.
-	return defaultActionInfo()
-}
-func defaultActionInfo() map[string]actionInfo {
-	return map[string]actionInfo{
-		"-status": {
-			Name:   "-status",
-			Action: "git status",
-		},
-		"-shortstatus": {
-			Name:   "-shortStatus",
-			Action: "git status -sb",
-		},
-		"-stashes": {
-			Name:   "-stashes",
-			Action: "git stash list",
-		},
-		"-fetch": {
-			Name:   "-fetch",
-			Action: "git fetch",
-		},
-		"-fetchall": {
-			Name:   "-fetchAll",
-			Action: "git fetch --all",
-		},
-		"-issues": {
-			Name:   "-issues",
-			Action: "gh issue list",
-		},
-	}
-}
-
-func tokenizeActions(args []string, argIndex int) ([]string, int, error) {
+func tokenizeActions(args []string, argIndex int) ([]action.Action, int, error) {
 	numArgs := len(args)
-	actions := make([]string, 0, numArgs-argIndex)
+	actions := make([]action.Action, 0, numArgs-argIndex)
 
-	actionOptions := ActionInfo()
+	actionOptions := action.DefaultShellActions()
 	for numArgs != argIndex {
 		thisArg := strings.Trim(strings.ToLower(args[argIndex]), " \t")
 		if entry, ok := actionOptions[thisArg]; ok {
-			actions = append(actions, entry.Action)
+			actions = append(actions, entry)
 		} else {
 			return actions, argIndex, fmt.Errorf("unknown action flag '%s'", args[argIndex])
 		}
@@ -61,7 +25,7 @@ func tokenizeActions(args []string, argIndex int) ([]string, int, error) {
 	return actions, argIndex, nil
 }
 
-func parseActions(args []string, argIndex int) ([]string, error) {
+func parseActions(args []string, argIndex int) ([]action.Action, error) {
 	actions, argIndex, err := tokenizeActions(args, argIndex)
 
 	if err != nil {
