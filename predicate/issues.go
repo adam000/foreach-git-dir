@@ -27,14 +27,14 @@ func HasIssues(root string) (bool, error) {
 	cmd = runner.Command("gh", "issue", "list")
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
+	lowered := strings.ToLower(string(out))
+	if strings.Contains(lowered, "has disabled issues") {
+		return false, nil
+	}
+	if strings.Contains(lowered, "no open issues") {
+		return false, nil
+	}
 	if err != nil {
-		lowered := strings.ToLower(string(out))
-		if strings.Contains(lowered, "has disabled issues") {
-			return false, nil
-		}
-		if strings.Contains(lowered, "no open issues") {
-			return false, nil
-		}
 		return false, err
 	}
 

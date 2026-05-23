@@ -7,11 +7,6 @@ import (
 
 type actionType int
 
-type actionToken struct {
-	typ  actionType
-	text string
-}
-
 type actionInfo struct {
 	Name   string
 	Action string
@@ -42,6 +37,10 @@ func defaultActionInfo() map[string]actionInfo {
 		"-fetchall": {
 			Name:   "-fetchAll",
 			Action: "git fetch --all",
+		},
+		"-issues": {
+			Name:   "-issues",
+			Action: "gh issue list",
 		},
 	}
 }
