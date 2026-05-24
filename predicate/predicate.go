@@ -31,9 +31,9 @@ func Or(p1, p2 Predicate) Predicate {
 	}
 }
 
-func Custom(command string) Predicate {
+func Custom(command string, shell []string) Predicate {
 	return func(root string) (bool, error) {
-		cmd := exec.Command("sh", "-c", command)
+		cmd := exec.Command(shell[0], append(shell[1:], command)...)
 		cmd.Dir = root
 		_, err := cmd.Output()
 

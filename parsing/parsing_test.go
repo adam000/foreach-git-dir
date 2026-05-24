@@ -1,11 +1,15 @@
 package parsing
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/adam000/foreach-git-dir/config"
+)
 
 func TestEmptyCommandLine(t *testing.T) {
 	args := []string{}
 
-	_, err := ParseCommandLine(args, "", nil)
+	_, err := ParseCommandLine(args, config.Config{})
 
 	if err == nil {
 		t.Errorf("Expected error parsing empty command line (with simulated no config), but that didn't happen")
@@ -15,7 +19,7 @@ func TestEmptyCommandLine(t *testing.T) {
 func TestEmptyCommandLineWithConfig(t *testing.T) {
 	args := []string{}
 
-	directives, err := ParseCommandLine(args, "/my/default/root", nil)
+	directives, err := ParseCommandLine(args, config.Config{RootDir: "/my/default/root"})
 
 	if err != nil {
 		t.Errorf("Unexpected error parsing empty command line with config: %v", err)

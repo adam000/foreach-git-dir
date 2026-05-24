@@ -36,11 +36,15 @@ You can chain directives together with `-and` or `-or`, though `-and` is implied
 ## Customizing
 
 You can pass the `-custom` flag with a value to either the predicates or the actions.
-Custom predicates and actions are run with `sh -c` so make sure you understand what you
-are running in those predicates and actions.
+Custom predicates and actions are run with `sh -c` (or `cmd.exe /C` on Windows) by
+default, though the shell can be changed with config (see Config below), so make sure you understand what you are running in those predicates and actions.
 
 For predicates, if the return value is 0, then the repo passes the filter, otherwise it
 is filtered out.
+
+Example:
+
+`foreach-git-dir ~/src -custom "pwd | grep -v test" -- -custom "cloc ."`
 
 # Config
 
@@ -49,6 +53,7 @@ Configuration lives in `$XDG_CONFIG_HOME/foreach-git-dir/config.json` and can lo
 ```
 {
     "rootDir": "/Users/adam/src",
+    "shell": ["zsh", "-c"],
     "excludes": [
         "junkdrawer"
     ]
@@ -56,6 +61,8 @@ Configuration lives in `$XDG_CONFIG_HOME/foreach-git-dir/config.json` and can lo
 ```
 
 A configured `rootDir` value means that you don't have to pass it on every invocation.
+
+`shell` is passed to custom predicates and actions.
 
 Excludes are useful for if you have a large subdirectory within your rootDir that you
 don't want scanned, and is not a git directory. Such subdirectories can cause the program

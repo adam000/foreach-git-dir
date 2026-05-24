@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/adam000/foreach-git-dir/predicate"
+	"github.com/adam000/foreach-git-dir/shell"
 )
 
 func TestNoPredicateTokenization(t *testing.T) {
@@ -102,7 +103,6 @@ func TestInvalidParenTokenization(t *testing.T) {
 	}
 }
 
-// Test when argIndex != 0
 func TestNonZeroArgIndexTokenization(t *testing.T) {
 	cases := []struct {
 		input    []string
@@ -173,7 +173,6 @@ func TestInvalidTokenization(t *testing.T) {
 	}
 }
 
-// try parsing predicates
 var testPredicateProvider = predicateProvider{
 	and: predicate.And,
 	or:  predicate.Or,
@@ -181,7 +180,7 @@ var testPredicateProvider = predicateProvider{
 	isDirty: func(root string) (bool, error) {
 		return strings.Contains(root, "dirty"), nil
 	},
-	custom: func(command string) predicate.Predicate {
+	custom: func(command string, shell []string) predicate.Predicate {
 		return func(root string) (bool, error) {
 			succeeds := strings.Contains(root, command)
 			if strings.Contains(root, "fail") {
@@ -655,7 +654,7 @@ func TestParseFailures(t *testing.T) {
 
 	for _, test := range testCases {
 		args := strings.Fields(test)
-		_, _, _, err := parsePredicates(args, 0)
+		_, _, _, err := parsePredicates(args, 0, shell.GetDefault())
 		if err == nil {
 			t.Errorf("Expected error parsing predicate, didn't get one")
 		}
@@ -671,7 +670,7 @@ func TestParseOther(t *testing.T) {
 
 	for _, test := range testCases {
 		args := strings.Fields(test)
-		_, _, _, err := parsePredicates(args, 0)
+		_, _, _, err := parsePredicates(args, 0, shell.GetDefault())
 		if err != nil {
 			t.Errorf("Error parsing: %s", err)
 		}

@@ -101,7 +101,7 @@ type predicateProvider struct {
 	and       func(p1, p2 predicate.Predicate) predicate.Predicate
 	or        func(p1, p2 predicate.Predicate) predicate.Predicate
 	not       func(pred predicate.Predicate) predicate.Predicate
-	custom    func(string) predicate.Predicate
+	custom    func(string, []string) predicate.Predicate
 	isDirty   predicate.Predicate
 	hasIssues predicate.Predicate
 }
@@ -209,6 +209,7 @@ type predicateParser struct {
 	tokens       []predicateToken
 	currentToken int
 	provider     predicateProvider
+	shell        []string
 }
 
 func (p predicateParser) allTokensConsumed() bool {
@@ -230,7 +231,7 @@ func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
 	switch token.flag {
 	case customFlag:
 		p.currentToken++
-		return p.provider.custom(token.text), nil
+		return p.provider.custom(token.text, p.shell), nil
 	case isDirtyFlag:
 		p.currentToken++
 		return p.provider.isDirty, nil
@@ -322,7 +323,7 @@ func (p *predicateParser) parseSubExpression() (predicate.Predicate, error) {
 	return predicate.Id, fmt.Errorf("unexpected %s, was expecting a flag, '-not', or '('", p.tokens[p.currentToken].typ.ToString())
 }
 
-func parsePredicates(args []string, argIndex int) (predicate.Predicate, []string, int, error) {
+func parsePredicates(args []string, argIndex int, shell []string) (predicate.Predicate, []string, int, error) {
 	tokens, excludes, argIndex, err := tokenizePredicates(args, argIndex)
 	if err != nil {
 		return predicate.Id, excludes, argIndex, fmt.Errorf("tokenizing predicates: %w", err)
@@ -332,6 +333,7 @@ func parsePredicates(args []string, argIndex int) (predicate.Predicate, []string
 		p := predicateParser{
 			tokens:   tokens,
 			provider: predProvider,
+			shell:    shell,
 		}
 
 		pred, err := p.parseExpression()

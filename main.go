@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/adam000/foreach-git-dir/action"
+	"github.com/adam000/foreach-git-dir/config"
 	"github.com/adam000/foreach-git-dir/parsing"
 	"github.com/adam000/goutils/git"
 	"github.com/adam000/goutils/shell"
@@ -64,34 +64,12 @@ repositories if no predicates are found.
 	logger := newLogger()
 	slog.SetDefault(logger)
 
-	// Load config defaults from XDG_CONFIG_HOME if it exists
-	cfgRoot := ""
-	cfgExcludes := make([]string, 0)
-
-	homeDir, _ := os.UserHomeDir()
-	xdgConfigHome := filepath.Join(homeDir, ".config")
-	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
-		xdgConfigHome = x
-	}
-	cfgPath := filepath.Join(xdgConfigHome, "foreach-git-dir", "config.json")
-	if cfgPath != "" {
-		if _, err := os.Stat(cfgPath); err == nil {
-			if b, err := os.ReadFile(cfgPath); err == nil {
-				var cfg struct {
-					RootDir  string   `json:"rootDir"`
-					Excludes []string `json:"excludes"`
-				}
-				if err := json.Unmarshal(b, &cfg); err == nil {
-					cfgRoot = cfg.RootDir
-					if cfg.Excludes != nil {
-						cfgExcludes = cfg.Excludes
-					}
-				}
-			}
-		}
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		slog.Error("Failed to load config", "error", err)
 	}
 
-	directives, err := parsing.ParseCommandLine(os.Args[1:], cfgRoot, cfgExcludes)
+	directives, err := parsing.ParseCommandLine(os.Args[1:], cfg)
 	if err != nil {
 		var predicates strings.Builder
 		for _, pred := range parsing.PredicateInfo() {
