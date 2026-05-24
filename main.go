@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -91,14 +92,70 @@ repositories if no predicates are found.
 		close(results)
 	}()
 
+	baseDirectoriesWithoutRepos := make([]string, 0)
+	// Find all the directories immediately under rootDir
+	// that are not in excludes.
+	{
+		entries, err := os.ReadDir(directives.RootDir)
+		if err != nil {
+			slog.Error("Error reading root directory", "rootDir", directives.RootDir, "error", err)
+		} else {
+			for _, entry := range entries {
+				if entry.IsDir() {
+					dirPath := filepath.Join(directives.RootDir, entry.Name())
+					if !slices.Contains(directives.Excludes, dirPath) {
+						baseDirectoriesWithoutRepos = append(baseDirectoriesWithoutRepos, dirPath)
+					}
+				}
+			}
+		}
+	}
+
 	errorResults := make([]result, 0)
 	validResults := make([]result, 0)
+	deletedDirectories := 0
 	for r := range results {
+		// If r.dir is the dir or a subdir of any of the base directories,
+		// delete it from baseDirectoriesWithoutRepos. Then it will only
+		// contain directories that don't have a git repo in them.
+		for i := 0; i < len(baseDirectoriesWithoutRepos)-deletedDirectories; i++ {
+			baseDir := baseDirectoriesWithoutRepos[i]
+			if r.dir == baseDir || strings.HasPrefix(r.dir, baseDir+"/") {
+				// Remove baseDir from baseDirectoriesWithoutRepos by swapping it with
+				// the last element. We will truncate the slice at the end of the loop.
+				end := len(baseDirectoriesWithoutRepos) - 1 - deletedDirectories
+				baseDirectoriesWithoutRepos[i], baseDirectoriesWithoutRepos[end] = baseDirectoriesWithoutRepos[end], baseDirectoriesWithoutRepos[i]
+				deletedDirectories++
+				break
+			}
+		}
+
 		if r.err != nil {
 			errorResults = append(errorResults, r)
 		} else if r.output != "" {
 			validResults = append(validResults, r)
 		}
+	}
+
+	// Warn the user if any directories in the excludes list do not exist.
+	for _, ex := range directives.Excludes {
+		if _, err := os.Stat(ex); err != nil {
+			if os.IsNotExist(err) {
+				fmt.Printf("Warning: excluded directory '%s' does not exist\n", ex)
+			}
+		}
+	}
+
+	baseDirectoriesWithoutRepos = baseDirectoriesWithoutRepos[:len(baseDirectoriesWithoutRepos)-deletedDirectories]
+	if len(baseDirectoriesWithoutRepos) > 0 {
+		fmt.Println("Directories without git repositories:")
+		for _, dir := range baseDirectoriesWithoutRepos {
+			fmt.Printf("  %s\n", dir)
+		}
+		fmt.Println()
+		fmt.Println("Note: the above directories do not contain any git repos.")
+		fmt.Println("You can ignore these repos with -exclude <dirname> or in the config file.")
+		fmt.Println()
 	}
 
 	for _, r := range errorResults {
