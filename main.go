@@ -16,6 +16,12 @@ import (
 	"github.com/adam000/goutils/shell"
 )
 
+type result struct {
+	dir    string
+	output string
+	err    error
+}
+
 func newLogger() *slog.Logger {
 	stateHome := os.Getenv("XDG_STATE_HOME")
 	if stateHome == "" {
@@ -84,13 +90,10 @@ repositories if no predicates are found.
 		fmt.Printf("Failure parsing command line: %v\n", err)
 		os.Exit(1)
 	}
-	sem := make(chan struct{}, 16)
 
+	sem := make(chan struct{}, 16)
 	results := make(chan result)
-	go func() {
-		processDirectory(sem, directives.RootDir, directives, results)
-		close(results)
-	}()
+	statusCh := make(chan statusEvent)
 
 	baseDirectoriesWithoutRepos := make([]string, 0)
 	// Find all the directories immediately under rootDir
@@ -113,29 +116,46 @@ repositories if no predicates are found.
 
 	errorResults := make([]result, 0)
 	validResults := make([]result, 0)
+	doneResults := make(chan struct{})
 	deletedDirectories := 0
-	for r := range results {
-		// If r.dir is the dir or a subdir of any of the base directories,
-		// delete it from baseDirectoriesWithoutRepos. Then it will only
-		// contain directories that don't have a git repo in them.
-		for i := 0; i < len(baseDirectoriesWithoutRepos)-deletedDirectories; i++ {
-			baseDir := baseDirectoriesWithoutRepos[i]
-			if r.dir == baseDir || strings.HasPrefix(r.dir, baseDir+"/") {
-				// Remove baseDir from baseDirectoriesWithoutRepos by swapping it with
-				// the last element. We will truncate the slice at the end of the loop.
-				end := len(baseDirectoriesWithoutRepos) - 1 - deletedDirectories
-				baseDirectoriesWithoutRepos[i], baseDirectoriesWithoutRepos[end] = baseDirectoriesWithoutRepos[end], baseDirectoriesWithoutRepos[i]
-				deletedDirectories++
-				break
+
+	go func() {
+		for r := range results {
+			// If r.dir is the dir or a subdir of any of the base directories,
+			// delete it from baseDirectoriesWithoutRepos. Then it will only
+			// contain directories that don't have a git repo in them.
+			for i := 0; i < len(baseDirectoriesWithoutRepos)-deletedDirectories; i++ {
+				baseDir := baseDirectoriesWithoutRepos[i]
+				if r.dir == baseDir || strings.HasPrefix(r.dir, baseDir+"/") {
+					// Remove baseDir from baseDirectoriesWithoutRepos by swapping it with
+					// the last element. We will truncate the slice at the end of the loop.
+					end := len(baseDirectoriesWithoutRepos) - 1 - deletedDirectories
+					baseDirectoriesWithoutRepos[i], baseDirectoriesWithoutRepos[end] = baseDirectoriesWithoutRepos[end], baseDirectoriesWithoutRepos[i]
+					deletedDirectories++
+					break
+				}
+			}
+
+			if r.err != nil {
+				errorResults = append(errorResults, r)
+			} else if r.output != "" {
+				validResults = append(validResults, r)
 			}
 		}
+		close(doneResults)
+	}()
 
-		if r.err != nil {
-			errorResults = append(errorResults, r)
-		} else if r.output != "" {
-			validResults = append(validResults, r)
-		}
+	go func() {
+		processDirectory(sem, directives.RootDir, directives, results, statusCh)
+		close(results)
+		close(statusCh)
+	}()
+
+	if err := startStatusUI(statusCh); err != nil {
+		slog.Error("Bubbletea UI failed", "error", err)
 	}
+
+	<-doneResults
 
 	// Warn the user if any directories in the excludes list do not exist.
 	for _, ex := range directives.Excludes {
@@ -170,15 +190,10 @@ repositories if no predicates are found.
 	fmt.Printf("%d repositories with %d errors\n", len(validResults), len(errorResults))
 }
 
-type result struct {
-	dir    string
-	output string
-	err    error
-}
-
 // processDirectory recursively searches a directory for Git repositories and
 // outputs their status. The given semaphore is used to limit concurrent work.
-func processDirectory(sem chan struct{}, dir string, directives parsing.Directives, results chan result) {
+func processDirectory(sem chan struct{}, dir string, directives parsing.Directives, results chan result, statusCh chan statusEvent) {
+	statusCh <- statusEvent{dir: filepath.ToSlash(dir), state: statusStarted}
 	sem <- struct{}{} // acquire semaphore
 
 	normalizedDir := filepath.ToSlash(dir)
@@ -189,6 +204,7 @@ func processDirectory(sem chan struct{}, dir string, directives parsing.Directiv
 			output: "",
 			err:    fmt.Errorf("processing directory %s: %w", normalizedDir, err),
 		}
+		statusCh <- statusEvent{dir: normalizedDir, state: statusError, err: err}
 		<-sem // release semaphore
 		return
 	}
@@ -203,6 +219,7 @@ func processDirectory(sem chan struct{}, dir string, directives parsing.Directiv
 					output: "",
 					err:    fmt.Errorf("testing predicates on repository %s: %w", dir, err),
 				}
+				statusCh <- statusEvent{dir: normalizedDir, state: statusError, err: err}
 				<-sem // release semaphore
 				return
 			}
@@ -236,6 +253,7 @@ func processDirectory(sem chan struct{}, dir string, directives parsing.Directiv
 			output: output.String(),
 			err:    nil,
 		}
+		statusCh <- statusEvent{dir: normalizedDir, state: statusSuccess}
 		<-sem // release semaphore
 		return
 	}
@@ -256,7 +274,7 @@ SubdirsLoop:
 		wg.Add(1)
 		go func(subdir string) {
 			defer wg.Done()
-			processDirectory(sem, subdir, directives, results)
+			processDirectory(sem, subdir, directives, results, statusCh)
 		}(subdir)
 	}
 	wg.Wait()
