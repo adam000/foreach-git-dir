@@ -197,6 +197,25 @@ func processDirectory(sem chan struct{}, dir string, directives parsing.Directiv
 	sem <- struct{}{} // acquire semaphore
 
 	normalizedDir := filepath.ToSlash(dir)
+
+	// Check for svn / hg / p4 metadata and skip if found.
+	otherRepoExists := false
+	if _, err := os.Stat(filepath.Join(normalizedDir, ".svn")); err == nil {
+		otherRepoExists = true
+	} else if _, err := os.Stat(filepath.Join(normalizedDir, ".hg")); err == nil {
+		otherRepoExists = true
+	} else if _, err := os.Stat(filepath.Join(normalizedDir, "p4config.txt")); err == nil {
+		otherRepoExists = true
+	}
+	if otherRepoExists {
+		statusCh <- statusEvent{dir: normalizedDir, state: statusComplete, err: nil}
+		results <- result{
+			dir: normalizedDir,
+		}
+		<-sem // release semaphore
+		return
+	}
+
 	isRoot, subdirs, err := shell.ParseDirectory(git.IsGitRoot, normalizedDir)
 	if err != nil {
 		results <- result{
