@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/adam000/foreach-git-dir/predicate"
@@ -94,6 +95,11 @@ func PredicateInfo() map[string]predicateInfo {
 			Description: "Does the repository have open issues? Requires gh (GitHub CLI) to be installed",
 			Typ:         pFlag,
 		},
+		"-grep": {
+			Name:        "-grep",
+			Description: "Search for a pattern in the repository (case-insensitive if the pattern is all lowercase)",
+			Typ:         pFlag,
+		},
 	}
 }
 
@@ -104,6 +110,7 @@ type predicateProvider struct {
 	custom    func(string, []string) predicate.Predicate
 	isDirty   predicate.Predicate
 	hasIssues predicate.Predicate
+	grep      func(string) predicate.Predicate
 }
 
 var predProvider = predicateProvider{
@@ -113,6 +120,7 @@ var predProvider = predicateProvider{
 	custom:    predicate.Custom,
 	isDirty:   predicate.IsDirty,
 	hasIssues: predicate.HasIssues,
+	grep:      predicate.Grep,
 }
 
 func tokenizePredicates(args []string, argIndex int) ([]predicateToken, []string, int, error) {
@@ -184,6 +192,30 @@ func tokenizePredicates(args []string, argIndex int) ([]predicateToken, []string
 						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -exclude; argument required")
 					}
 					excludes = append(excludes, excludeArg)
+				} else if info.Typ == pFlag && strings.ToLower(info.Name) == "-grep" {
+					// Can't have end parens after -grep but before the pattern
+					if numEndParens != 0 {
+						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -grep; argument required")
+					}
+
+					// consume the next token
+					argIndex++
+					pattern := args[argIndex]
+
+					// Take off end parens, keep track of them
+					for len(pattern) != 0 && pattern[len(pattern)-1] == ')' {
+						numEndParens++
+						pattern = pattern[:len(pattern)-1]
+					}
+					if len(pattern) == 0 {
+						return []predicateToken{}, excludes, argIndex, fmt.Errorf("can't have end parentheses immediately after -grep; argument required")
+					}
+
+					pTok = append(pTok, predicateToken{
+						typ:  pFlag,
+						flag: strings.ToLower(info.Name),
+						text: pattern,
+					})
 				} else {
 					pTok = append(pTok, predicateToken{
 						typ:  info.Typ,
@@ -224,6 +256,7 @@ const (
 	customFlag    = "-custom"
 	isDirtyFlag   = "-isdirty"
 	hasIssuesFlag = "-hasissues"
+	grepFlag      = "-grep"
 )
 
 func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
@@ -231,6 +264,7 @@ func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
 	switch token.flag {
 	case customFlag:
 		p.currentToken++
+		slog.Info("parsing custom predicate", "command", token.text)
 		return p.provider.custom(token.text, p.shell), nil
 	case isDirtyFlag:
 		p.currentToken++
@@ -238,6 +272,10 @@ func (p *predicateParser) parseFlag() (predicate.Predicate, error) {
 	case hasIssuesFlag:
 		p.currentToken++
 		return p.provider.hasIssues, nil
+	case grepFlag:
+		p.currentToken++
+		slog.Debug("parsed grep flag", "pattern", token.text)
+		return p.provider.grep(token.text), nil
 	default:
 		return predicate.Id, fmt.Errorf("unknown flag '%s'", token)
 	}

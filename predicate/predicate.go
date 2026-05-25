@@ -1,6 +1,9 @@
 package predicate
 
-import "os/exec"
+import (
+	"os/exec"
+	"strings"
+)
 
 type Predicate func(string) (bool, error)
 
@@ -54,4 +57,21 @@ func IsDirty(root string) (bool, error) {
 	out, _ := cmd.Output()
 
 	return len(out) != 0, nil
+}
+
+func Grep(pattern string) Predicate {
+	return func(root string) (bool, error) {
+		params := []string{"grep", "-q"}
+		// Smart search: if the pattern is all lowercase, ignore case
+		if strings.ToLower(pattern) == pattern {
+			params = append(params, "-i")
+		}
+		params = append(params, pattern)
+
+		cmd := exec.Command("git", params...)
+		cmd.Dir = root
+		err := cmd.Run()
+
+		return err == nil, nil
+	}
 }
