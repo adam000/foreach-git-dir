@@ -260,7 +260,7 @@ func processDirectory(sem chan struct{}, dir string, directives parsing.Directiv
 					stdout, err := action.Run(dir)
 
 					if err != nil {
-						fmt.Fprintf(&output, "Error while running %s: %s\n", action, err)
+						fmt.Fprintf(&output, "Error while running %s: %s\n", action.Name(), err)
 					}
 					fmt.Fprintf(&output, "%s\n", stdout)
 				}

@@ -33,6 +33,10 @@ You can chain directives together with `-and` or `-or`, though `-and` is implied
 
 `foreach-git-dir ~/src -isDirty -hasIssues`
 
+`foreach-git-dir ~/src -- -refresh`
+
+Refresh all the repos (or the repos that match). This will only run `git pull` on repos that have only untracked files, running `git fetch --all` otherwise.
+
 ## Customizing
 
 You can pass the `-custom` flag with a value to either the predicates or the actions.

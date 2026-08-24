@@ -59,5 +59,6 @@ func DefaultShellActions() map[string]Action {
 			name:    "-issues",
 			command: "gh issue list",
 		},
+		"-refresh": &RefreshAction{},
 	}
 }
