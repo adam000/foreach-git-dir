@@ -2,6 +2,7 @@ package parsing
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,9 +24,16 @@ type Directives struct {
 // ParseCommandLine parses the command line taking optional defaults for root and excludes.
 // default parameters will only be used if the command line doesn't provide a value for them.
 func ParseCommandLine(args []string, cfg config.Config) (Directives, error) {
+	excludes := make([]string, 0, len(cfg.Excludes))
+	for _, excludeDir := range cfg.Excludes {
+		if !filepath.IsAbs(excludeDir) {
+			slog.Warn("Config exclude must be an absolute path (see README)", "excludeDir", excludeDir)
+		}
+		excludes = append(excludes, filepath.Clean(excludeDir))
+	}
 	directives := Directives{
 		RootDir:  cfg.RootDir,
-		Excludes: cfg.Excludes,
+		Excludes: excludes,
 	}
 
 	if len(args) == 0 {
@@ -88,7 +96,14 @@ func ParseCommandLine(args []string, cfg config.Config) (Directives, error) {
 		argIndex = newArgIndex
 		directives.Predicates = predicates
 		if len(excludes) != 0 {
-			directives.Excludes = excludes
+			resolvedExcludes := make([]string, 0, len(excludes))
+			for _, ex := range excludes {
+				if !filepath.IsAbs(ex) {
+					ex = filepath.Join(directives.RootDir, ex)
+				}
+				resolvedExcludes = append(resolvedExcludes, filepath.Clean(ex))
+			}
+			directives.Excludes = resolvedExcludes
 		}
 	}
 

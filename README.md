@@ -55,7 +55,7 @@ Configuration lives in `$XDG_CONFIG_HOME/foreach-git-dir/config.json` and can lo
     "rootDir": "/Users/adam/src",
     "shell": ["zsh", "-c"],
     "excludes": [
-        "junkdrawer"
+        "/Users/adam/src/junkdrawer"
     ]
 }
 ```
@@ -66,7 +66,8 @@ A configured `rootDir` value means that you don't have to pass it on every invoc
 
 Excludes are useful for if you have a large subdirectory within your rootDir that you
 don't want scanned, and is not a git directory. Such subdirectories can cause the program
-to spend a lot of time looking for git repos that don't exist.
+to spend a lot of time looking for git repos that don't exist. Excludes must be absolute
+paths in the config, but may be relative to rootDir when passed as a command line flag.
 
 All values are optional.
 

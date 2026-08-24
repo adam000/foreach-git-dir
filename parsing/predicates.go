@@ -87,7 +87,7 @@ func PredicateInfo() map[string]predicateInfo {
 		},
 		"-exclude": {
 			Name:        "-exclude",
-			Description: "Exclude a directory (relative to rootDir)",
+			Description: "Exclude a directory (relative to rootDir or absolute)",
 			Typ:         pFlag,
 		},
 		"-hasissues": {

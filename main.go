@@ -284,8 +284,7 @@ func processDirectory(sem chan struct{}, dir string, directives parsing.Directiv
 SubdirsLoop:
 	for _, subdir := range subdirs {
 		for _, ex := range directives.Excludes {
-			relPath, _ := filepath.Rel(directives.RootDir, subdir)
-			if relPath == ex {
+			if subdir == ex {
 				continue SubdirsLoop
 			}
 		}
