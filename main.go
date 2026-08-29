@@ -51,7 +51,11 @@ Description: find all the git repositories under the <root-dir> and run some
 and -and combination of predicates.
 
 Usage:
-	foreach-git-dir <root-dir> [--verbose|-v] [<predicate>...] [-- <action>...]
+	foreach-git-dir [<root-dir>] [--verbose|-v] [<predicate>...] [-- <action>...]
+
+<root-dir>
+	The directory to scan. If not provided, relies on a config file at
+	$XDG_CONFIG_HOME/foreach-git-dir/config.yaml (defaulting that variable to ~/.config)
 
 Predicates:
 %s
